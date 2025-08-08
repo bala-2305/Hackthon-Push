@@ -61,4 +61,50 @@ def load_model():
     model.eval()
     return model
 
+transform = transforms.Compose([
+    transforms.Resize((128, 128)),
+    transforms.ToTensor(),
+    transforms.Normalize([0.485, 0.456, 0.406],
+                         [0.229, 0.224, 0.225])
+])
+
+st.set_page_config(page_title="Plant Disease App", layout="centered")
+st.sidebar.title("🌐 Language / மொழி / भाषा")
+language = st.sidebar.radio("Choose Language", list(LANGUAGES.keys()))
+txt = LANGUAGES[language]
+
+st.title(txt["title"])
+model = load_model()
+
+uploaded_file = st.file_uploader(txt["upload"], type=["jpg", "jpeg", "png"])
+
+if uploaded_file:
+    image = Image.open(uploaded_file).convert('RGB')
+    st.image(image, caption="Uploaded Image", use_container_width=True)
+
+    if st.button(txt["predict"]):
+        input_img = transform(image).unsqueeze(0)
+        with torch.no_grad():
+            outputs = model(input_img)
+            probs = torch.nn.functional.softmax(outputs, dim=1)[0]
+            top_class = torch.argmax(probs).item()
+            predicted_class = class_names[top_class]
+            confidence = probs[top_class].item()
+
+        translated = TRANSLATIONS.get(predicted_class, {}).get(language, predicted_class)
+
+        st.success(f"{txt['result']} **{translated}** ({confidence*100:.2f}%)")
+        st.text_input(txt["copy_label"], value=translated, key="copy_field")
+
+        st.write("### 🔍 Class Probabilities:")
+        for i, score in enumerate(probs.tolist()):
+            label = TRANSLATIONS.get(class_names[i], {}).get(language, class_names[i])
+            st.write(f"{label}: {score*100:.2f}%")
+
+        # 👉 REDIRECT LINK TO APP 2
+        disease_query = quote(translated)
+        redirect_url = f"https://plantdiseaseautoinjectchat.onrender.com?disease={disease_query}"
+        st.markdown("#### 📩 Learn more about this disease:")
+        st.markdown(f"[🔗 Ask AI Expert about **{translated}**]({redirect_url})")
+
 
