@@ -50,3 +50,15 @@ TRANSLATIONS = {
     "Tomato__Tomato_mosaic_virus": {"தமிழ்": "தக்காளி___மொசாயிக் வைரஸ்", "हिन्दी": "टमाटर___मोज़ेक वायरस"},
     "Tomato_healthy": {"தமிழ்": "தக்காளி___ஆரோக்கியம்", "हिन्दी": "टमाटर___स्वस्थ"}
 }
+
+class_names = list(TRANSLATIONS.keys())
+
+@st.cache_resource
+def load_model():
+    model = models.mobilenet_v2(pretrained=False)
+    model.classifier[1] = nn.Linear(model.last_channel, len(class_names))
+    model.load_state_dict(torch.load("plant_disease_model.pth", map_location='cpu'))
+    model.eval()
+    return model
+
+
